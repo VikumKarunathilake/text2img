@@ -14,12 +14,15 @@ export default function ImageGenerator() {
   const [steps, setSteps] = useState(4)
   const [n, setN] = useState(1)
   const [image, setImage] = useState('')
+  const [imgbbUrl, setImgbbUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const generateImage = useCallback(async () => {
     setLoading(true)
     setError('')
+    setImage('')
+    setImgbbUrl('')
     try {
       const response = await fetch('/api/generate-image', {
         method: 'POST',
@@ -40,6 +43,7 @@ export default function ImageGenerator() {
       }
 
       setImage(`data:image/png;base64,${data.image}`)
+      setImgbbUrl(data.imgbbUrl)
     } catch (err) {
       setError(`An error occurred: ${err instanceof Error ? err.message : String(err)}`)
       console.error('Error details:', err)
@@ -116,6 +120,14 @@ export default function ImageGenerator() {
           <div className="mt-4">
             <h2 className="text-xl font-bold mb-2">Generated Image:</h2>
             <Image src={image} alt="Generated image" width={width} height={height} />
+          </div>
+        )}
+        {imgbbUrl && (
+          <div className="mt-4">
+            <h2 className="text-xl font-bold mb-2">ImgBB URL:</h2>
+            <a href={imgbbUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline break-all">
+              {imgbbUrl}
+            </a>
           </div>
         )}
       </div>

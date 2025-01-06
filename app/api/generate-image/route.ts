@@ -1,11 +1,36 @@
 import { NextResponse } from 'next/server'
 
+async function uploadToImgBB(base64Image: string): Promise<string> {
+  const response = await fetch('https://api.imgbb.com/1/upload', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      key: process.env.IMGBB_API_KEY!,
+      image: base64Image,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`ImgBB API error: ${response.status} ${await response.text()}`);
+  }
+
+  const data = await response.json();
+  return data.data.url;
+}
+
 export async function POST(req: Request) {
   const { prompt, width, height, steps, n } = await req.json()
 
   if (!process.env.TOGETHER_API_KEY) {
     console.error('TOGETHER_API_KEY is not set')
     return NextResponse.json({ error: 'API key is not configured' }, { status: 500 })
+  }
+
+  if (!process.env.IMGBB_API_KEY) {
+    console.error('IMGBB_API_KEY is not set')
+    return NextResponse.json({ error: 'ImgBB API key is not configured' }, { status: 500 })
   }
 
   try {
@@ -38,10 +63,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unexpected API response structure' }, { status: 500 })
     }
 
-    return NextResponse.json({ image: data.data[0].b64_json })
+    const base64Image = data.data[0].b64_json
+    const imgbbUrl = await uploadToImgBB(base64Image)
+
+    return NextResponse.json({ image: base64Image, imgbbUrl })
   } catch (error) {
-    console.error('Error generating image:', error)
-    return NextResponse.json({ error: 'Failed to generate image: ' + (error instanceof Error ? error.message : String(error)) }, { status: 500 })
+    console.error('Error generating or uploading image:', error)
+    return NextResponse.json({ error: 'Failed to generate or upload image: ' + (error instanceof Error ? error.message : String(error)) }, { status: 500 })
   }
 }
 
