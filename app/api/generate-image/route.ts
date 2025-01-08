@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { query } from '@/utils/db'
 
 async function uploadToImgBB(base64Image: string): Promise<string> {
   const response = await fetch('https://api.imgbb.com/1/upload', {
@@ -31,6 +32,11 @@ export async function POST(req: Request) {
   if (!process.env.IMGBB_API_KEY) {
     console.error('IMGBB_API_KEY is not set')
     return NextResponse.json({ error: 'ImgBB API key is not configured' }, { status: 500 })
+  }
+
+  if (!process.env.DATABASE_URL) {
+    console.error('DATABASE_URL is not set')
+    return NextResponse.json({ error: 'Database connection is not configured' }, { status: 500 })
   }
 
   try {
@@ -66,10 +72,19 @@ export async function POST(req: Request) {
     const base64Image = data.data[0].b64_json
     const imgbbUrl = await uploadToImgBB(base64Image)
 
-    return NextResponse.json({ image: base64Image, imgbbUrl })
+    // Save to database
+    const insertQuery = `
+      INSERT INTO generated_images (prompt, width, height, steps, n, image_url)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id
+    `;
+    const values = [prompt, width, height, steps, n, imgbbUrl];
+    const result = await query(insertQuery, values);
+
+    return NextResponse.json({ image: base64Image, imgbbUrl, dbId: result.rows[0].id })
   } catch (error) {
-    console.error('Error generating or uploading image:', error)
-    return NextResponse.json({ error: 'Failed to generate or upload image: ' + (error instanceof Error ? error.message : String(error)) }, { status: 500 })
+    console.error('Error generating, uploading image, or saving to database:', error)
+    return NextResponse.json({ error: 'Failed to process request: ' + (error instanceof Error ? error.message : String(error)) }, { status: 500 })
   }
 }
 

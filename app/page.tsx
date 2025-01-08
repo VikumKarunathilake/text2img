@@ -15,6 +15,7 @@ export default function ImageGenerator() {
   const [n, setN] = useState(1)
   const [image, setImage] = useState('')
   const [imgbbUrl, setImgbbUrl] = useState('')
+  const [dbId, setDbId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -23,6 +24,7 @@ export default function ImageGenerator() {
     setError('')
     setImage('')
     setImgbbUrl('')
+    setDbId(null)
     try {
       const response = await fetch('/api/generate-image', {
         method: 'POST',
@@ -44,6 +46,7 @@ export default function ImageGenerator() {
 
       setImage(`data:image/png;base64,${data.image}`)
       setImgbbUrl(data.imgbbUrl)
+      setDbId(data.dbId)
     } catch (err) {
       setError(`An error occurred: ${err instanceof Error ? err.message : String(err)}`)
       console.error('Error details:', err)
@@ -119,7 +122,7 @@ export default function ImageGenerator() {
         {image && (
           <div className="mt-4">
             <h2 className="text-xl font-bold mb-2">Generated Image:</h2>
-            <Image src={image} alt="Generated image" width={width} height={height} />
+            <Image src={image} alt="Generated image" width={width} height={height} style={{ width: '50%', height: 'auto' }} />
           </div>
         )}
         {imgbbUrl && (
@@ -128,6 +131,12 @@ export default function ImageGenerator() {
             <a href={imgbbUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline break-all">
               {imgbbUrl}
             </a>
+          </div>
+        )}
+        {dbId && (
+          <div className="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+            <h3 className="font-bold">Success:</h3>
+            <p>Image details saved to database with ID: {dbId}</p>
           </div>
         )}
       </div>
